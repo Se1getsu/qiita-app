@@ -78,7 +78,7 @@ extension ViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         guard let article = articles?[indexPath.row] else { return }
-        let url = URL(string: "https://qiita.com/Se1getsu/items/\(article.id)")!
+        let url = URL(string: "https://qiita.com/items/\(article.id)")!
         UIApplication.shared.open(url)
     }
 }
