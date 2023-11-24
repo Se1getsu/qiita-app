@@ -24,7 +24,7 @@ struct Article: Decodable {
     let user: User
 }
 
-struct QiitaRepository {
+class QiitaRepository {
     func fetchArticles(count: Int) async throws -> [Article] {
         let url = URL(string: "https://qiita.com/api/v2/items?page=1&per_page=\(count)")!
         let (data, _) = try await URLSession.shared.data(from: url)
@@ -35,10 +35,10 @@ struct QiitaRepository {
 class ViewController: UIViewController {
     private let tableView: UITableView = {
         let tableView = UITableView()
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
+        tableView.register(ArticleCell.self, forCellReuseIdentifier: "articleCell")
         return tableView
     }()
-    private let repository = QiitaRepository()
+    private var repository = QiitaRepository()
     private var articles: [Article]?
     
     override func viewDidLoad() {
@@ -50,12 +50,16 @@ class ViewController: UIViewController {
         tableView.delegate = self
         
         Task {
-            do {
-                articles = try await repository.fetchArticles(count: 20)
-                tableView.reloadData()
-            } catch {
-                print("ERROR: \(error)")
-            }
+            await fetchAndDisplayData()
+        }
+    }
+    
+    func fetchAndDisplayData() async {
+        do {
+            articles = try await repository.fetchArticles(count: 50)
+            tableView.reloadData()
+        } catch {
+            print("ERROR: \(error)")
         }
     }
 }
@@ -66,12 +70,10 @@ extension ViewController: UITableViewDataSource, UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
+        let cell = tableView.dequeueReusableCell(withIdentifier: "articleCell", for: indexPath) as! ArticleCell
         guard let article = articles?[indexPath.row] else { return cell }
-        var config = cell.defaultContentConfiguration()
-        config.text = article.title
-        config.secondaryText = "by @\(article.user.id)"
-        cell.contentConfiguration = config
+        cell.title = article.title
+        cell.setProfileImageURL(article.user.profileImageURL)
         return cell
     }
     
@@ -80,5 +82,71 @@ extension ViewController: UITableViewDataSource, UITableViewDelegate {
         guard let article = articles?[indexPath.row] else { return }
         let url = URL(string: "https://qiita.com/items/\(article.id)")!
         UIApplication.shared.open(url)
+    }
+}
+
+class ArticleCell: UITableViewCell {
+    private var titleLabel: UILabel = {
+        let label = UILabel()
+        return label
+    }()
+    private var profileImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.contentMode = .scaleAspectFit
+        return imageView
+    }()
+    
+    var title: String? {
+        didSet {
+            titleLabel.text = title
+        }
+    }
+    var image: UIImage? {
+        didSet {
+            profileImageView.image = image
+        }
+    }
+
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        setupViews()
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+        setupViews()
+    }
+
+    private func setupViews() {
+        profileImageView.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(profileImageView)
+        contentView.addSubview(titleLabel)
+        NSLayoutConstraint.activate([
+            profileImageView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
+            profileImageView.centerYAnchor.constraint(equalTo: centerYAnchor),
+            profileImageView.widthAnchor.constraint(equalToConstant: 36),
+            profileImageView.heightAnchor.constraint(equalToConstant: 36),
+            titleLabel.leadingAnchor.constraint(equalTo: profileImageView.trailingAnchor, constant: 6),
+            titleLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
+            titleLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
+            titleLabel.heightAnchor.constraint(equalToConstant: 44)
+        ])
+    }
+    
+    func setProfileImageURL(_ urlString: String) {
+        Task {
+            do {
+                let url = URL(string: urlString)!
+                let (data, _) = try await URLSession.shared.data(from: url)
+                let image = UIImage(data: data) ?? UIImage()
+                await MainActor.run {
+                    profileImageView.image = image
+                }
+            } catch {
+                print("Failed to load image \(urlString): \(error)")
+            }
+        }
     }
 }
