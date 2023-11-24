@@ -59,7 +59,20 @@ class ViewController: UIViewController {
             articles = try await repository.fetchArticles(count: 50)
             tableView.reloadData()
         } catch {
-            print("ERROR: \(error)")
+            print("[Error] 通信に失敗: \(error)")
+            let alert = UIAlertController(title: "通信に失敗しました。", message: "再試行しますか？", preferredStyle: .alert)
+            let cancel = UIAlertAction(title: "キャンセル", style: .cancel) { _ in
+                self.dismiss(animated: true, completion: nil)
+            }
+            let ok = UIAlertAction(title: "OK", style: .default) { _ in
+                self.dismiss(animated: true, completion: nil)
+                Task {
+                    await self.fetchAndDisplayData()
+                }
+            }
+            alert.addAction(cancel)
+            alert.addAction(ok)
+            present(alert, animated: true, completion: nil)
         }
     }
 }
