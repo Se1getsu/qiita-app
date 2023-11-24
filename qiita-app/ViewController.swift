@@ -25,8 +25,8 @@ struct Article: Decodable {
 }
 
 class QiitaRepository {
-    func fetchArticles(count: Int) async throws -> [Article] {
-        let url = URL(string: "https://qiita.com/api/v2/items?page=1&per_page=\(count)")!
+    func fetchArticles(count: Int, title: String = "") async throws -> [Article] {
+        let url = URL(string: "https://qiita.com/api/v2/items?page=1&per_page=\(count)&query=title:\(title)")!
         let (data, _) = try await URLSession.shared.data(from: url)
         return try JSONDecoder().decode([Article].self, from: data)
     }
