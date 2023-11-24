@@ -25,6 +25,10 @@ struct Article: Decodable {
 }
 
 class QiitaRepository {
+    /// QiitaAPIから記事の一覧を取得する。
+    ///
+    /// - parameter count: 何件取得するか。
+    /// - parameter title: タイトルの検索キーワード。
     func fetchArticles(count: Int, title: String = "") async throws -> [Article] {
         let url = URL(string: "https://qiita.com/api/v2/items?page=1&per_page=\(count)&query=title:\(title)")!
         let (data, _) = try await URLSession.shared.data(from: url)
@@ -38,25 +42,40 @@ class ViewController: UIViewController {
         tableView.register(ArticleCell.self, forCellReuseIdentifier: "articleCell")
         return tableView
     }()
+    private let searchBar: UISearchBar = {
+        let searchBar = UISearchBar()
+        searchBar.placeholder = "検索"
+        searchBar.showsCancelButton = false
+        return searchBar
+    }()
     private var repository = QiitaRepository()
     private var articles: [Article]?
     
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
+        setUpSearchBar()
+        
         tableView.frame = view.bounds
         view.addSubview(tableView)
+        
+        searchBar.delegate = self
         tableView.dataSource = self
         tableView.delegate = self
         
         Task {
-            await fetchAndDisplayData()
+            await fetchAndDisplayData(title: "")
         }
     }
     
-    func fetchAndDisplayData() async {
+    func setUpSearchBar() {
+        navigationItem.titleView = searchBar
+    }
+    
+    /// - parameter title: 検索キーワード
+    func fetchAndDisplayData(title: String) async {
         do {
-            articles = try await repository.fetchArticles(count: 50)
+            articles = try await repository.fetchArticles(count: 50, title: title)
             tableView.reloadData()
         } catch {
             print("[Error] 通信に失敗: \(error)")
@@ -67,13 +86,36 @@ class ViewController: UIViewController {
             let ok = UIAlertAction(title: "OK", style: .default) { _ in
                 self.dismiss(animated: true, completion: nil)
                 Task {
-                    await self.fetchAndDisplayData()
+                    await self.fetchAndDisplayData(title: title)
                 }
             }
             alert.addAction(cancel)
             alert.addAction(ok)
             present(alert, animated: true, completion: nil)
         }
+    }
+}
+
+extension ViewController: UISearchBarDelegate {
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        searchBar.showsCancelButton = !searchText.isEmpty
+    }
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        guard let text = searchBar.text else { return }
+        Task {
+            await fetchAndDisplayData(title: text)
+        }
+        searchBar.endEditing(true)
+    }
+    
+    func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+        searchBar.text = ""
+        searchBar.showsCancelButton = false
+        Task {
+            await fetchAndDisplayData(title: "")
+        }
+        searchBar.endEditing(true)
     }
 }
 
