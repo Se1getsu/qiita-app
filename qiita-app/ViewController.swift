@@ -58,6 +58,7 @@ class ViewController: UIViewController {
         
         tableView.frame = view.bounds
         view.addSubview(tableView)
+        tableView.rowHeight = 44
         
         searchBar.delegate = self
         tableView.dataSource = self
@@ -165,27 +166,26 @@ class ArticleCell: UITableViewCell {
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
-        setupViews()
+        setUpViews()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
 
-    required init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
-        setupViews()
-    }
-
-    private func setupViews() {
+    private func setUpViews() {
         profileImageView.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(profileImageView)
         contentView.addSubview(titleLabel)
         NSLayoutConstraint.activate([
-            profileImageView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
-            profileImageView.centerYAnchor.constraint(equalTo: centerYAnchor),
+            profileImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 4),
+            profileImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             profileImageView.widthAnchor.constraint(equalToConstant: 36),
             profileImageView.heightAnchor.constraint(equalToConstant: 36),
             titleLabel.leadingAnchor.constraint(equalTo: profileImageView.trailingAnchor, constant: 6),
-            titleLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
-            titleLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
+            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -4),
+            titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             titleLabel.heightAnchor.constraint(equalToConstant: 44)
         ])
     }
